@@ -17,6 +17,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
@@ -35,6 +38,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
+          platforms: linux/amd64,linux/arm64
           push: true
           build-args: |
             HOST=${{ secrets.HOST || '0.0.0.0' }}
@@ -45,4 +49,6 @@ jobs:
             ghcr.io/${{ env.REPO_LOWER }}:${{ github.sha }}
           labels: |
             org.opencontainers.image.source=${{ github.event.repository.html_url }}
-            org.opencontainers.image.revision=${{ github.sha }} 
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max 
