@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}CLIPSHARE - Share Text & Files{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <p>clipshare.com is a fast, minimal and reliable file hosting provider.</p>
+
+    <div class="upload-form">
+        <form id="clipForm" enctype="multipart/form-data">
+            <div class="form-group">
+                <textarea id="content" name="content" rows="10" placeholder="Paste your text or code here..."></textarea>
+            </div>
+            
+            <div class="file-selection">
+                <label for="file" class="file-label">Choose files</label>
+                <input type="file" id="file" name="files" multiple>
+                <span id="fileName">No files chosen</span>
+            </div>
+            
+            <div style="display:none;">
+                <label for="language">Language (for syntax highlighting):</label>
+                <select id="language" name="language">
+                    <option value="">Auto-detect</option>
+                    <option value="plaintext">Plain Text</option>
+                    <option value="javascript">JavaScript</option>
+                    <option value="python">Python</option>
+                    <option value="java">Java</option>
+                    <option value="csharp">C#</option>
+                    <option value="cpp">C++</option>
+                    <option value="html">HTML</option>
+                    <option value="css">CSS</option>
+                    <option value="json">JSON</option>
+                    <option value="xml">XML</option>
+                    <option value="markdown">Markdown</option>
+                    <option value="sql">SQL</option>
+                    <option value="bash">Bash</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="expiration_hours">Keep for:</label>
+                <select id="expiration_hours" name="expiration_hours">
+                    <option value="1">1 hour</option>
+                    <option value="6">6 hours</option>
+                    <option value="12">12 hours</option>
+                    <option value="24" selected>24 hours</option>
+                    <option value="72">3 days</option>
+                    <option value="168">7 days</option>
+                    <option value="720">30 days</option>
+                </select>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">Upload</button>
+                <button type="reset" class="btn-secondary">Cancel</button>
+            </div>
+        </form>
+    </div>
+    
+    <div id="result" class="result-container hidden">
+        <h3>Your clip has been created!</h3>
+        <p>Access Code: <span id="accessCode" class="access-code"></span></p>
+        <p>Share this code with others to let them view your clip.</p>
+        <p>Or use this link:</p>
+        <div class="copy-link">
+            <input type="text" id="clipLink" readonly>
+            <button id="copyLink" class="btn-copy">Copy</button>
+        </div>
+        <a href="#" id="viewLink" class="btn-view">View Clip</a>
+    </div>
+    <br>
+    <div class="features">
+        <h3>Our main features include</h3>
+        <ul class="features-list">
+            <li>It's Fast</li>
+            <li>Simple UI. No Bullshit. Just Works.</li>
+            <li>No file size limits, No download speed caps.</li>
+            <li>Strict Zero log policy - We don't care what you upload or download.</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Handle file input display
+    document.getElementById('file').addEventListener('change', function(e) {
+        const fileCount = e.target.files.length;
+        const fileName = fileCount 
+            ? (fileCount > 1 ? `${fileCount} files selected` : e.target.files[0].name) 
+            : 'No files chosen';
+        document.getElementById('fileName').textContent = fileName;
+    });
+
+    // Handle form submission
+    document.getElementById('clipForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData();
+        const contentText = document.getElementById('content').value;
+        const fileInput = document.getElementById('file');
+        const expirationHours = document.getElementById('expiration_hours').value;
+        const language = document.getElementById('language').value;
+        
+        // Add text content if provided
+        if (contentText.trim()) {
+            formData.append('content', contentText);
+            formData.append('language', language);
+        }
+        
+        // Add expiration hours
+        formData.append('expiration_hours', expirationHours);
+        
+        // Add all files
+        if (fileInput.files.length > 0) {
+            for (const file of fileInput.files) {
+                formData.append('files', file);
+            }
+        }
+        
+        // Validate that at least content or file is provided
+        if (!contentText.trim() && (!fileInput.files || fileInput.files.length === 0)) {
+            alert('Please provide either text content or upload a file.');
+            return;
+        }
+        
+        try {
+            const response = await fetch('/api/clips', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to create clip');
+            }
+            
+            const result = await response.json();
+            
+            // Show result container
+            document.getElementById('accessCode').textContent = result.access_code;
+            
+            const clipUrl = `${window.location.origin}/view/${result.access_code}`;
+            document.getElementById('clipLink').value = clipUrl;
+            document.getElementById('viewLink').href = clipUrl;
+            
+            document.getElementById('result').classList.remove('hidden');
+            
+            // Scroll to result
+            document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
+            
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Failed to create clip. Please try again.');
+        }
+    });
+
+    // Handle copy link button
+    document.getElementById('copyLink').addEventListener('click', function() {
+        const linkInput = document.getElementById('clipLink');
+        linkInput.select();
+        document.execCommand('copy');
+        this.textContent = 'Copied!';
+        setTimeout(() => {
+            this.textContent = 'Copy';
+        }, 2000);
+    });
+</script>
+{% endblock %} 

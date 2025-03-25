@@ -1,0 +1,447 @@
+{% extends "base.html" %}
+
+{% block title %}CLIPSHARE - View Clip{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+<style>
+    .clipboard-message {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #333;
+        color: white;
+        padding: 10px 20px;
+        display: none;
+        z-index: 1000;
+    }
+    .file-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1rem;
+        margin: 1rem 0;
+    }
+    .file-item {
+        border: 1px solid var(--border-color);
+        padding: 1rem;
+        background-color: var(--secondary-color);
+    }
+    .file-item img {
+        max-width: 100%;
+        max-height: 150px;
+        margin-bottom: 0.5rem;
+        object-fit: contain;
+    }
+    .file-name {
+        font-size: 1rem;
+        margin: 0.5rem 0;
+        word-break: break-all;
+    }
+    .file-info {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+    .file-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    .btn-download, .btn-preview {
+        flex: 1;
+        text-align: center;
+        padding: 0.6rem 1.2rem;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        background-color: var(--button-color);
+        color: var(--text-color);
+        border: none;
+    }
+    .btn-download:hover, .btn-preview:hover {
+        background-color: var(--button-hover);
+        text-decoration: none;
+    }
+    .download-all-btn {
+        display: block;
+        width: 100%;
+        padding: 0.6rem 1.2rem;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        background-color: var(--button-color);
+        color: var(--text-color);
+        text-align: center;
+        text-decoration: none;
+        margin-bottom: 1rem;
+        border: none;
+    }
+    .download-all-btn:hover {
+        background-color: var(--button-hover);
+        text-decoration: none;
+    }
+    .language-badge {
+        display: inline-block;
+        background-color: #444;
+        color: #fff;
+        padding: 0.2rem 0.4rem;
+        font-size: 0.8rem;
+        margin-left: 0.5rem;
+    }
+    .language-select {
+        padding: 0.4rem 0.8rem;
+        border: 1px solid var(--border-color);
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        font-family: inherit;
+        font-size: 0.9rem;
+        appearance: none;
+        background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23FFFFFF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.7em top 50%;
+        background-size: 0.65em auto;
+        padding-right: 24px;
+        min-width: 130px;
+        cursor: pointer;
+        line-height: 1.2;
+    }
+    .content-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding: 0.5rem;
+        background-color: var(--secondary-color);
+        border: 1px solid var(--border-color);
+    }
+    .content-actions .button-group {
+        display: flex;
+        gap: 0.5rem;
+        flex: 1;
+        max-width: 60%;
+    }
+    .content-actions .language-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .btn-download, .btn-preview {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        background-color: var(--button-color);
+        color: var(--text-color);
+        border: none;
+        text-decoration: none;
+        text-align: center;
+        line-height: 1.2;
+        white-space: nowrap;
+    }
+    #copyContent {
+        min-width: 100px;
+    }
+    .language-badge {
+        display: inline-block;
+        background-color: var(--button-color);
+        color: var(--text-color);
+        padding: 0.2rem 0.4rem;
+        font-size: 0.8rem;
+    }
+    .code-container {
+        position: relative;
+        overflow-x: auto;
+        background-color: var(--secondary-color);
+        border: 1px solid var(--border-color);
+    }
+    .code-container pre {
+        margin: 0;
+    }
+    .code-container code {
+        white-space: pre;
+        word-wrap: normal;
+        display: inline-block;
+        min-width: 100%;
+    }
+    .file-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin: 1rem 0;
+        width: 100%;
+    }
+    .file-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem;
+        background-color: var(--secondary-color);
+        border: 1px solid var(--border-color);
+        width: 100%;
+    }
+    .file-info-section {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex: 1;
+        min-width: 0;
+    }
+    .file-item img {
+        width: 32px;
+        height: 32px;
+        object-fit: contain;
+    }
+    .file-details {
+        min-width: 0;
+        flex: 1;
+    }
+    .file-name {
+        font-size: 0.9rem;
+        margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .file-type {
+        color: var(--text-muted);
+        font-size: 0.8rem;
+    }
+    .file-actions {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="clip-view">
+        <div class="clip-header">
+            <h2>Clip #{{ access_code }}</h2>
+            <div>Expires: {{ expires_at.strftime('%Y-%m-%d %H:%M UTC') }}</div>
+        </div>
+        
+        {% if is_file %}
+            <div class="file-info">
+                {% set file_list = filenames.split(',') if filenames else [] %}
+                
+                {% if file_list|length > 1 %}
+                    <h3>Files ({{ file_list|length }})</h3>
+                    <a href="/api/clips/{{ access_code }}/download?download_all=true" 
+                       class="download-all-btn" 
+                       download="files.zip">
+                        Download All Files as ZIP
+                    </a>
+                    
+                    <div class="file-list">
+                        {% for filename in file_list %}
+                            {% if filename.strip() %}
+                                <div class="file-item">
+                                    <div class="file-info-section">
+                                        {% set ext = filename.split('.')[-1].lower() %}
+                                        {% if ext in ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'] %}
+                                            <img src="/api/clips/{{ access_code }}/download?filename={{ filename|urlencode }}" 
+                                                 alt="{{ filename }}" 
+                                                 loading="lazy"
+                                                 onerror="this.onerror=null; this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22><text x=%2250%%22 y=%2250%%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23666%22>Error</text></svg>';">
+                                        {% endif %}
+                                        
+                                        <div class="file-details">
+                                            <div class="file-name" title="{{ filename }}">{{ filename }}</div>
+                                            <div class="file-type">{{ filename.split('.')[-1].upper() }} File</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="file-actions">
+                                        <a href="/api/clips/{{ access_code }}/download?filename={{ filename|urlencode }}" 
+                                           class="btn-download" 
+                                           download="{{ filename }}">Download</a>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                {% elif is_image %}
+                    <h3>Image: {{ file_list[0] }}</h3>
+                    <div class="image-preview">
+                        <img src="/api/clips/{{ access_code }}/download" 
+                             alt="{{ file_list[0] }}" 
+                             id="previewImage"
+                             onerror="this.onerror=null; this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22><text x=%2250%%22 y=%2250%%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23666%22>Error loading image</text></svg>';">
+                        <div class="file-actions">
+                            <button id="copyImage" class="btn-preview">Copy Image</button>
+                            <a href="/api/clips/{{ access_code }}/download" 
+                               class="btn-download" 
+                               download="{{ file_list[0] }}">Download</a>
+                        </div>
+                    </div>
+                {% else %}
+                    <h3>File: {{ file_list[0] }}</h3>
+                    <div class="file-actions">
+                        <a href="/api/clips/{{ access_code }}/download" 
+                           class="btn-download" 
+                           download="{{ file_list[0] }}">Download</a>
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+        
+        {% if content %}
+            <div class="content-actions">
+                <div class="button-group">
+                    <button id="copyContent" class="btn-preview">Copy Content</button>
+                    <a href="/api/clips/{{ access_code }}/download?as_text=true" class="btn-download">Download as File</a>
+                </div>
+                <div class="language-group">
+                    <select id="languageToggle" class="language-select">
+                        <option value="{{ language }}" selected>{{ language if language else 'auto-detect' }}</option>
+                        <option value="plaintext">Plain Text</option>
+                        <option value="javascript">JavaScript</option>
+                        <option value="python">Python</option>
+                        <option value="java">Java</option>
+                        <option value="csharp">C#</option>
+                        <option value="cpp">C++</option>
+                        <option value="html">HTML</option>
+                        <option value="css">CSS</option>
+                        <option value="json">JSON</option>
+                        <option value="xml">XML</option>
+                        <option value="markdown">Markdown</option>
+                        <option value="sql">SQL</option>
+                        <option value="bash">Bash</option>
+                    </select>
+                    {% if language %}
+                        <span class="language-badge">{{ language }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="code-container">
+                <pre><code id="codeBlock" class="{% if language %}language-{{ language }}{% endif %}">{{ content }}</code></pre>
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="features">
+        <h3>Our main features include</h3>
+        <ul class="features-list">
+            <li>It's Fast</li>
+            <li>Simple UI. No Bullshit. Just Works.</li>
+            <li>No file size limits, No download speed caps.</li>
+            <li>Strict Zero log policy - We don't care what you upload or download.</li>
+        </ul>
+    </div>
+</div>
+
+<div class="clipboard-message" id="clipboardMessage">Copied to clipboard!</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize syntax highlighting
+        document.querySelectorAll('pre code').forEach((block) => {
+            hljs.highlightElement(block);
+        });
+        
+        function showMessage(message) {
+            const msgElement = document.getElementById('clipboardMessage');
+            msgElement.textContent = message;
+            msgElement.style.display = 'block';
+            
+            setTimeout(() => {
+                msgElement.style.display = 'none';
+            }, 2000);
+        }
+        
+        // Handle copy content button
+        const copyButton = document.getElementById('copyContent');
+        if (copyButton) {
+            copyButton.addEventListener('click', function() {
+                const codeBlock = document.getElementById('codeBlock');
+                
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(codeBlock.textContent)
+                        .then(() => {
+                            showMessage('Content copied to clipboard!');
+                        })
+                        .catch(err => {
+                            console.error('Failed to copy:', err);
+                            copyUsingSelection(codeBlock);
+                        });
+                } else {
+                    copyUsingSelection(codeBlock);
+                }
+            });
+            
+            function copyUsingSelection(element) {
+                const range = document.createRange();
+                range.selectNode(element);
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(range);
+                
+                try {
+                    const successful = document.execCommand('copy');
+                    if (successful) {
+                        showMessage('Content copied to clipboard!');
+                    } else {
+                        showMessage('Failed to copy. Please try manually selecting the text.');
+                    }
+                } catch (err) {
+                    console.error('Error during copy:', err);
+                    showMessage('Copy failed. Please try manually selecting the text.');
+                }
+                
+                window.getSelection().removeAllRanges();
+            }
+        }
+        
+        // Handle copy image button
+        const copyImageButton = document.getElementById('copyImage');
+        if (copyImageButton) {
+            copyImageButton.addEventListener('click', async function() {
+                try {
+                    const img = document.getElementById('previewImage');
+                    
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    
+                    canvas.toBlob(async (blob) => {
+                        try {
+                            if (navigator.clipboard && window.ClipboardItem) {
+                                const item = new ClipboardItem({ 'image/png': blob });
+                                await navigator.clipboard.write([item]);
+                                showMessage('Image copied to clipboard!');
+                            } else {
+                                showMessage('Your browser doesn\'t support image copying. Please use the download button.');
+                            }
+                        } catch (err) {
+                            console.error('Failed to copy image:', err);
+                            showMessage('Failed to copy image. Your browser may not support this feature.');
+                        }
+                    }, 'image/png');
+                } catch (err) {
+                    console.error('Error preparing image:', err);
+                    showMessage('Failed to copy image. Your browser may not support this feature.');
+                }
+            });
+        }
+        
+        // Handle language toggle
+        const languageToggle = document.getElementById('languageToggle');
+        if (languageToggle) {
+            languageToggle.addEventListener('change', function() {
+                const codeBlock = document.getElementById('codeBlock');
+                codeBlock.className = '';
+                codeBlock.classList.add(`language-${this.value}`);
+                hljs.highlightElement(codeBlock);
+            });
+        }
+    });
+</script>
+{% endblock %} 
