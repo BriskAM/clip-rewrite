@@ -23,8 +23,14 @@ ENV RELOAD=false
 ENV FLASK_APP=main.py
 ENV FLASK_ENV=production
 
+# Create a script to initialize the database and start the application
+RUN echo '#!/bin/sh\n\
+python init_db.py\n\
+python main.py' > /app/start.sh && \
+chmod +x /app/start.sh
+
 # Expose the port from .env
 EXPOSE 8000
 
-# Run the application
-CMD ["python", "main.py"] 
+# Run the start script
+CMD ["/app/start.sh"] 
