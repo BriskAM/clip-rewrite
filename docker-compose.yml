@@ -2,16 +2,17 @@ version: '3.8'
 
 services:
   web:
-    image: ghcr.io/briskam/clip-rewrite:760340ed23a9e1dc4bd9165b6f96a00eee2a8b1e
+    build: .  # Build from local Dockerfile instead of using remote image
     ports:
       - "8000:8000"
     volumes:
       - ./uploads:/app/uploads
-      - ./clipshare.db:/app/clipshare.db
+      - ./data:/app/data  # Mount a data directory for persistent storage
     environment:
       - HOST=0.0.0.0
       - PORT=8000
       - FLASK_APP=main.py
       - FLASK_ENV=production
       - RELOAD=false
+      - DATABASE_DIR=/app/data
     restart: unless-stopped 

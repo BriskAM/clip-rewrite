@@ -153,6 +153,14 @@ def get_clip(access_code: str, db: Session = Depends(get_db)):
     
     # Check if clip has expired
     if clip.expires_at < datetime.utcnow():
+        # Clean up files if they exist
+        if clip.file_path and os.path.exists(clip.file_path):
+            import shutil
+            try:
+                shutil.rmtree(clip.file_path)
+            except Exception:
+                pass  # Continue even if file cleanup fails
+        
         db.delete(clip)
         db.commit()
         raise HTTPException(status_code=404, detail="Clip has expired")
